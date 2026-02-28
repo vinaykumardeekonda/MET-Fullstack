@@ -76,6 +76,10 @@ export const resetPasswordSchema = Joi.object({
 
 // Category validation schemas
 export const categorySchema = Joi.object({
+  id: Joi.string().required().messages({
+    'string.empty': 'Category ID is required',
+    'any.required': 'Category ID is required'
+  }),
   name: Joi.string().min(1).max(100).required().messages({
     'string.min': 'Category name is required',
     'string.max': 'Category name must not exceed 100 characters',
@@ -97,8 +101,8 @@ export const expenseSchema = Joi.object({
     'number.positive': 'Amount must be a positive number',
     'any.required': 'Amount is required'
   }),
-  categoryId: Joi.string().uuid().required().messages({
-    'string.uuid': 'Invalid category ID',
+  categoryId: Joi.string().required().messages({
+    'string.empty': 'Category ID is required',
     'any.required': 'Category is required'
   }),
   description: Joi.string().max(1000).allow(''),
@@ -110,7 +114,9 @@ export const expenseSchema = Joi.object({
   }),
   tags: Joi.array().items(Joi.string().max(50)).default([]),
   location: Joi.string().max(255).allow(''),
-  paymentMethod: Joi.string().valid('cash', 'card', 'bank_transfer', 'digital_wallet', 'other').allow('')
+  paymentMethod: Joi.string().valid('cash', 'card', 'bank_transfer', 'digital_wallet', 'other').allow(''),
+  isRecurring: Joi.boolean().default(false),
+  recurrenceInterval: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly').allow(null).default(null)
 });
 
 // Budget validation schemas

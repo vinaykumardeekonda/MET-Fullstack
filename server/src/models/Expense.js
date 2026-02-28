@@ -16,7 +16,7 @@ const Expense = sequelize.define('Expense', {
     }
   },
   categoryId: {
-    type: DataTypes.UUID,
+    type: DataTypes.STRING,
     allowNull: false,
     references: {
       model: 'categories',

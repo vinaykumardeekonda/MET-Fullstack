@@ -157,7 +157,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new expense
 router.post('/', authenticateToken, upload.single('receipt'), async (req, res) => {
   try {
+    console.log('🔍 Expense request body:', JSON.stringify(req.body, null, 2));
     const { error } = expenseSchema.validate(req.body);
+    console.log('🔍 Expense validation result:', error);
     if (error) {
       return res.status(400).json({
         success: false,
