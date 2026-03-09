@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { budgetSchema, dateRangeSchema } from '../validators/index.js';
 import { Budget, Category, Expense } from '../models/index.js';
+import { sequelize } from '../config/database.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -119,11 +121,25 @@ router.post('/', authenticateToken, async (req, res) => {
     const { categoryId } = req.body;
     const userId = req.user.id;
 
-    // TODO: Fix category validation - temporarily disabled
-    // For category budgets, ensure categoryId is preserved
+    // Validate that if categoryId is provided, it exists for this user
     if (categoryId && categoryId !== "overall") {
-      console.log('🔍 Preserving categoryId for category budget:', categoryId);
-      // Don't override categoryId - keep the original value
+      const category = await Category.findOne({
+        where: { code: categoryId, userId }
+      });
+      
+      if (!category) {
+        console.log(`❌ Category ${categoryId} not found for user ${userId}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid category',
+          details: `Category with code "${categoryId}" does not exist for this user`
+        });
+      }
+      
+      console.log(`✅ Category ${categoryId} found: ${category.name}`);
+      
+      // Convert category code to actual category ID for storage
+      req.body.categoryId = category.id;
     } else {
       console.log('🔍 Setting categoryId to null for overall budget');
       req.body.categoryId = null;
@@ -188,7 +204,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Verify category belongs to user if provided
     if (categoryId) {
       const category = await Category.findOne({
-        where: { id: categoryId, userId }
+        where: { 
+          [Op.or]: [
+            { id: categoryId, userId },
+            { code: categoryId, userId }
+          ]
+        }
       });
 
       if (!category) {
@@ -197,6 +218,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
           message: 'Invalid category'
         });
       }
+
+      // Replace category code with category ID for database consistency
+      req.body.categoryId = category.id;
     }
 
     const updatedBudget = await budget.update(req.body);

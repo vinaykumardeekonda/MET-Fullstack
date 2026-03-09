@@ -113,8 +113,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new category
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Category creation request body:', JSON.stringify(req.body, null, 2));
+    
     const { error } = categorySchema.validate(req.body);
     if (error) {
+      console.log('🔍 Category validation error:', error.details[0].message);
       return res.status(400).json({
         success: false,
         message: 'Validation error',
@@ -127,7 +130,22 @@ router.post('/', authenticateToken, async (req, res) => {
       userId: req.user.id
     };
 
-    const category = await Category.create(categoryData);
+    // Use findOrCreate to prevent duplicates
+    const [category, created] = await Category.findOrCreate({
+      where: {
+        userId: req.user.id,
+        code: req.body.code
+      },
+      defaults: categoryData
+    });
+
+    if (!created) {
+      return res.status(409).json({
+        success: false,
+        message: 'Category already exists',
+        details: `Category with code "${req.body.code}" already exists for this user`
+      });
+    }
 
     res.status(201).json({
       success: true,

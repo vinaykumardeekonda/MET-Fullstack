@@ -3,9 +3,19 @@ import { sequelize } from '../config/database.js';
 
 const Category = sequelize.define('Category', {
   id: {
-    type: DataTypes.STRING,
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
     allowNull: false
+  },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 50]
+    },
+    comment: 'User-friendly category code like food, shopping'
   },
   name: {
     type: DataTypes.STRING(100),
@@ -20,11 +30,11 @@ const Category = sequelize.define('Category', {
     allowNull: true
   },
   color: {
-    type: DataTypes.STRING(7),
+    type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: '#3B82F6',
     validate: {
-      is: /^#[0-9A-F]{6}$/i // Hex color validation
+      is: [/^#([0-9A-F]{3}){1,2}$/i, /^hsl\(\d+,\s*\d+%,\s*\d+%\)$/i] // Allow both HEX and HSL
     }
   },
   icon: {
@@ -51,6 +61,14 @@ const Category = sequelize.define('Category', {
 }, {
   tableName: 'categories',
   timestamps: true
+  // Temporarily disabled - will re-enable after data cleanup
+  // indexes: [
+  //   {
+  //     unique: true,
+  //     fields: ['userId', 'code'],
+  //     name: 'categories_user_code_unique'
+  //   }
+  // ]
 });
 
 export default Category;

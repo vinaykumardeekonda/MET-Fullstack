@@ -14,27 +14,39 @@ import {
 // Create default categories for new user
 const createDefaultCategories = async (userId) => {
   const defaultCategories = [
-    { name: "Food & Dining", icon: "UtensilsCrossed", color: "hsl(142, 60%, 45%)", type: "expense" },
-    { name: "Transport", icon: "Car", color: "hsl(200, 80%, 50%)", type: "expense" },
-    { name: "Shopping", icon: "ShoppingBag", color: "hsl(340, 75%, 55%)", type: "expense" },
-    { name: "Entertainment", icon: "Gamepad2", color: "hsl(280, 65%, 55%)", type: "expense" },
-    { name: "Bills & Utilities", icon: "Zap", color: "hsl(35, 92%, 55%)", type: "expense" },
-    { name: "Health", icon: "Heart", color: "hsl(0, 72%, 51%)", type: "expense" },
-    { name: "Education", icon: "GraduationCap", color: "hsl(220, 70%, 55%)", type: "expense" },
-    { name: "Subscriptions", icon: "CreditCard", color: "hsl(170, 60%, 45%)", type: "expense" },
-    { name: "Travel", icon: "Plane", color: "hsl(250, 65%, 55%)", type: "expense" },
-    { name: "Other", icon: "MoreHorizontal", color: "hsl(220, 10%, 50%)", type: "expense" },
-    { name: "Salary", icon: "DollarSign", color: "hsl(142, 70%, 45%)", type: "income" },
-    { name: "Freelance", icon: "Briefcase", color: "hsl(200, 80%, 50%)", type: "income" },
-    { name: "Investment", icon: "TrendingUp", color: "hsl(340, 75%, 55%)", type: "income" },
-    { name: "Gift", icon: "Gift", color: "hsl(280, 65%, 55%)", type: "income" }
+    { code: "food", name: "Food & Dining", icon: "", color: "#FF6B6B", type: "expense" },
+    { code: "transport", name: "Transport", icon: "", color: "#4CAF50", type: "expense" },
+    { code: "shopping", name: "Shopping", icon: "", color: "#9C27B0", type: "expense" },
+    { code: "entertainment", name: "Entertainment", icon: "", color: "#FF5722", type: "expense" },
+    { code: "bills", name: "Bills & Utilities", icon: "", color: "#FF9800", type: "expense" },
+    { code: "health", name: "Health", icon: "", color: "#2196F3", type: "expense" },
+    { code: "education", name: "Education", icon: "", color: "#3F51B5", type: "expense" },
+    { code: "subscriptions", name: "Subscriptions", icon: "", color: "#F44336", type: "expense" },
+    { code: "travel", name: "Travel", icon: "", color: "#795548", type: "expense" },
+    { code: "other", name: "Other", icon: "", color: "#607D8B", type: "expense" },
+    { code: "salary", name: "Salary", icon: "", color: "#4CAF50", type: "income" },
+    { code: "freelance", name: "Freelance", icon: "", color: "#2196F3", type: "income" },
+    { code: "investment", name: "Investment", icon: "", color: "#FF9800", type: "income" },
+    { code: "gift", name: "Gift", icon: "", color: "#9C27B0", type: "income" }
   ];
 
   try {
-    await Promise.all(defaultCategories.map(category => 
-      Category.create({ ...category, userId })
-    ));
-    console.log('✅ Created default categories for user:', userId);
+    await Promise.all(defaultCategories.map(async (category) => {
+      const [createdCategory, created] = await Category.findOrCreate({
+        where: {
+          userId,
+          code: category.code
+        },
+        defaults: { ...category, userId }
+      });
+      
+      if (created) {
+        console.log(`✅ Created category: ${category.name} (${category.code})`);
+      } else {
+        console.log(`⚠️ Category already exists: ${category.name} (${category.code})`);
+      }
+    }));
+    console.log('✅ Default categories processed for user:', userId);
   } catch (error) {
     console.error('Failed to create default categories:', error);
   }

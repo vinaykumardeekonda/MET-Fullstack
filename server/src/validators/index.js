@@ -76,9 +76,10 @@ export const resetPasswordSchema = Joi.object({
 
 // Category validation schemas
 export const categorySchema = Joi.object({
-  id: Joi.string().required().messages({
-    'string.empty': 'Category ID is required',
-    'any.required': 'Category ID is required'
+  code: Joi.string().min(1).max(50).required().messages({
+    'string.min': 'Category code is required',
+    'string.max': 'Category code must not exceed 50 characters',
+    'any.required': 'Category code is required'
   }),
   name: Joi.string().min(1).max(100).required().messages({
     'string.min': 'Category name is required',
@@ -86,8 +87,8 @@ export const categorySchema = Joi.object({
     'any.required': 'Category name is required'
   }),
   description: Joi.string().max(500).allow(''),
-  color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).default('#3B82F6').messages({
-    'string.pattern.base': 'Color must be a valid hex color code'
+  color: Joi.string().pattern(/(^#[0-9A-F]{6}$)|(^hsl\(\d+,\s*\d+%,\s*\d+%\)$)/i).default('#3B82F6').messages({
+    'string.pattern.base': 'Color must be a valid hex color code (e.g., #FF6B6B) or HSL color (e.g., hsl(0, 70%, 55%))'
   }),
   icon: Joi.string().max(50).allow(''),
   type: Joi.string().valid('expense', 'income').default('expense').messages({
@@ -150,8 +151,12 @@ export const budgetSchema = Joi.object({
 
 // Query validation schemas
 export const dateRangeSchema = Joi.object({
-  startDate: Joi.date(),
-  endDate: Joi.date().greater(Joi.ref('startDate')),
+  startDate: Joi.date().optional(),
+  endDate: Joi.date().optional().when('startDate', {
+    is: Joi.exist(),
+    then: Joi.date().greater(Joi.ref('startDate')),
+    otherwise: Joi.date().optional()
+  }),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
   sortBy: Joi.string().valid('date', 'amount', 'title', 'createdAt').default('date'),

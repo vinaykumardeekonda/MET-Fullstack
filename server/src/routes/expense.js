@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
 import { expenseSchema, dateRangeSchema } from '../validators/index.js';
 import { Expense, Category } from '../models/index.js';
+import { sequelize } from '../config/database.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -82,6 +84,8 @@ router.get('/', authenticateToken, async (req, res) => {
       whereClause.type = type;
     }
 
+    console.log('🔍 Expense query - whereClause:', whereClause);
+
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const { count, rows: expenses } = await Expense.findAndCountAll({
@@ -95,6 +99,9 @@ router.get('/', authenticateToken, async (req, res) => {
       limit: parseInt(limit),
       offset
     });
+
+    console.log('🔍 Found expenses:', count, 'rows:', expenses.length);
+    console.log('🔍 Expense data:', expenses.map(e => ({ id: e.id, amount: e.amount, categoryId: e.categoryId, category: e.expenseCategory?.name })));
 
     res.json({
       success: true,
@@ -170,18 +177,28 @@ router.post('/', authenticateToken, upload.single('receipt'), async (req, res) =
 
     // Verify category belongs to user
     const category = await Category.findOne({
-      where: { id: req.body.categoryId, userId: req.user.id }
+      where: { 
+        [Op.or]: [
+          { id: req.body.categoryId, userId: req.user.id },
+          { code: req.body.categoryId, userId: req.user.id }
+        ]
+      }
     });
 
     if (!category) {
+      console.log(`❌ Category not found for expense: ${req.body.categoryId}`);
       return res.status(400).json({
         success: false,
-        message: 'Invalid category'
+        message: 'Invalid category',
+        details: `Category with ID or code "${req.body.categoryId}" does not exist for this user`
       });
     }
 
+    console.log(`✅ Category found for expense: ${category.name} (${category.id}, ${category.code})`);
+
     const expenseData = {
       ...req.body,
+      categoryId: category.id, // Store the actual category ID
       userId: req.user.id,
       receipt: req.file ? `/uploads/${req.file.filename}` : null
     };
@@ -369,5 +386,64 @@ router.get('/stats/summary', authenticateToken, async (req, res) => {
     });
   }
 });
+
+// Clear all data for authenticated user (DISABLED - CRASHES)
+// router.delete('/clear-all', authenticateToken, async (req, res) => {
+//   const transaction = await sequelize.transaction();
+//   
+//   try {
+//     const userId = req.user.id;
+//     
+//     console.log(`🗑️ Clearing all data for user: ${userId}`);
+//     
+//     // Delete all expenses
+//     const deletedExpenses = await Expense.destroy({
+//       where: { userId },
+//       transaction
+//     });
+//     console.log(`🗑️ Deleted ${deletedExpenses} expenses`);
+//     
+//     // Delete all budgets
+//     const deletedBudgets = await Budget.destroy({
+//       where: { userId },
+//       transaction
+//     });
+//     console.log(`🗑️ Deleted ${deletedBudgets} budgets`);
+//     
+//     // Delete all custom categories (keep default ones)
+//     const deletedCategories = await Category.destroy({
+//       where: { 
+//         userId,
+//         code: { [Op.ne]: 'food', 'transport', 'health', 'entertainment', 'shopping', 'bills', 'education', 'subscriptions', 'other', 'travel' }
+//       },
+//       transaction
+//     });
+//     console.log(`🗑️ Deleted ${deletedCategories} custom categories`);
+//     
+//     await transaction.commit();
+//     
+//     console.log('✅ All data cleared successfully');
+//     
+//     res.json({
+//       success: true,
+//       message: 'All data cleared successfully',
+//       data: {
+//         deletedExpenses,
+//         deletedBudgets,
+//         deletedCategories
+//       }
+//     });
+//     
+//   } catch (error) {
+//     console.error('Clear all data error:', error);
+//     await transaction.rollback();
+//     
+//     res.status(500).json({
+//       success: false,
+//       message: 'Server error while clearing data',
+//       error: error.message
+//     });
+//   }
+// });
 
 export default router;
